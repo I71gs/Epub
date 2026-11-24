@@ -1,67 +1,166 @@
 # AI Audiobook Maker
 
-A Python foundation for turning books into narrated audiobooks.
+AI Audiobook Maker is a Python application for converting EPUB and PDF books into narrated audiobook files. It combines book parsing, book intelligence, narration planning, narrator profiles, job tracking, and the `ebook2audiobook` (E2A) headless CLI.
 
-## Sprint 1 Task 1
+## Current Features
 
-This first slice contains the package layout, standard-library configuration, and logging only. TTS, LLM, UI, database, and E2A integrations are intentionally not implemented.
+- PDF and EPUB parsing
+- Book metadata and chapter extraction
+- Scene, character, dialogue, and narration analysis
+- Narration plans compiled to E2A-compatible SML
+- Narrator profile registry and validation
+- Job state tracking
+- Pipeline orchestration
+- Command-line audiobook generation
+- Automatic E2A entrypoint discovery
+- Headless E2A subprocess execution
+- Process cancellation and E2A session resume
+- Structured subprocess output and diagnostics
+- Local caching for book intelligence results
+- Configurable application paths and logging
 
-## Run checks
+## Project Layout
 
-From the project root:
-
-```powershell
-python -m pytest
+```text
+app/
+  book/         PDF/EPUB parsing and book intelligence
+  core/         Configuration and logging
+  narration/    Narration plan compilation and smoke tests
+  narrator/     Narrator models and registry
+  pipeline/     Pipeline and job orchestration
+  tts/          ebook2audiobook subprocess adapter
+  ui/           Reserved for a future interface
+  audio/        Reserved for audio processing
+data/           Source and working data
+narrators/      Narrator profiles and reference audio
+output/         Generated audiobook files
+tests/          Automated pytest suite
+docs/           Architecture and integration documentation
 ```
 
-Configuration can be overridden with `AUDIOBOOK_APP_NAME`, `AUDIOBOOK_LOG_LEVEL`, `AUDIOBOOK_DATA_DIR`, `AUDIOBOOK_NARRATORS_DIR`, and `AUDIOBOOK_OUTPUT_DIR`.
+## Requirements
 
-## E2A Setup & Discovery
+- Python 3.11 or newer
+- PyMuPDF
+- Pydantic
+- HTTPX
+- An installed, reachable `ebook2audiobook` installation for real audiobook generation
 
-The system automatically discovers the `ebook2audiobook` (E2A) installation using the following priority:
+Install Python dependencies:
 
-1. **`E2A_ENTRYPOINT` environment variable**: Direct path to the E2A executable or script (e.g. `C:\tools\E2A\ebook2audiobook.cmd`).
-2. **`E2A_ROOT` environment variable**: Directory containing the E2A installation root (resolves to `ebook2audiobook.cmd` or standard entrypoint script in that directory).
-3. **Configured adapter path**: Path explicitly passed when initializing `E2AAdapter(entrypoint=...)`.
-4. **PATH lookup**: System `PATH` search for `ebook2audiobook.cmd` (or `ebook2audiobook`).
-
-### Setup Instructions
-
-To configure E2A:
-
-**Windows PowerShell:**
 ```powershell
-# Option 1: Direct entrypoint path
-$env:E2A_ENTRYPOINT = "C:\path\to\ebook2audiobook.cmd"
-
-# Option 2: E2A installation root
-$env:E2A_ROOT = "C:\path\to\ebook2audiobook"
+python -m pip install -r requirements.txt
 ```
 
-**CMD:**
+## Configuration
+
+Application paths can be overridden with environment variables:
+
+| Variable | Purpose |
+| --- | --- |
+| `AUDIOBOOK_APP_NAME` | Application name |
+| `AUDIOBOOK_LOG_LEVEL` | Logging level |
+| `AUDIOBOOK_DATA_DIR` | Source and working data directory |
+| `AUDIOBOOK_NARRATORS_DIR` | Narrator profile directory |
+| `AUDIOBOOK_OUTPUT_DIR` | Generated audiobook directory |
+
+E2A discovery uses these variables:
+
+| Variable | Purpose |
+| --- | --- |
+| `E2A_ENTRYPOINT` | Direct path to an E2A launcher or entrypoint |
+| `E2A_ROOT` | E2A installation directory |
+
+Discovery priority is:
+
+1. `E2A_ENTRYPOINT`
+2. `E2A_ROOT`
+3. A configured `E2AAdapter(entrypoint=...)`
+4. `ebook2audiobook.cmd` or `ebook2audiobook` on `PATH`
+
+### Windows PowerShell
+
+```powershell
+$env:E2A_ENTRYPOINT = "C:\tools\E2A\ebook2audiobook.cmd"
+# or
+$env:E2A_ROOT = "C:\tools\E2A"
+```
+
+### CMD
+
 ```cmd
-set E2A_ENTRYPOINT=C:\path\to\ebook2audiobook.cmd
-set E2A_ROOT=C:\path\to\ebook2audiobook
+set E2A_ENTRYPOINT=C:\tools\E2A\ebook2audiobook.cmd
 ```
 
-**Linux/macOS:**
+### Linux or macOS
+
 ```bash
 export E2A_ENTRYPOINT=/usr/local/bin/ebook2audiobook.sh
+# or
 export E2A_ROOT=/opt/ebook2audiobook
 ```
 
-### Running the E2A Integration Smoke Test
+## Generate an Audiobook
 
-To verify your E2A configuration:
+Run the CLI from the project root:
+
+```powershell
+python -m app generate ".\book.epub" --language eng --output-format m4b
+```
+
+Available options:
+
+```text
+input_path                 EPUB or PDF source file
+--language                 ISO language code; default: eng
+--voice                    Voice reference audio file
+--output-dir               Destination directory
+--output-format            m4b or another format supported by E2A
+--session                  E2A session ID for resume
+```
+
+The CLI validates EPUB/PDF input, voice-reference files, output directories, formats, and E2A entrypoints before generation starts.
+
+## E2A Smoke Test
+
+Verify E2A discovery and the minimal subprocess integration:
 
 ```powershell
 python -m app.narration.smoke_test
 ```
 
-The smoke test will output diagnostic status detailing:
+The smoke test reports:
+
 - Resolved E2A path
-- Whether it exists
+- Whether the entrypoint exists
 - Whether it is executable
 - Detected E2A root
 - Discovery source
+- A generated output path when conversion succeeds
 
+## Run Tests
+
+```powershell
+python -m pytest
+```
+
+For a quick summary:
+
+```powershell
+python -m pytest -q
+```
+
+## Documentation
+
+- [Architecture](docs/ARCHITECTURE.md)
+- [E2A narration capabilities](docs/E2A_NARRATION_CAPABILITIES.md)
+- [LLM training and improvement roadmap](docs/LLM_TRAINING_ROADMAP.md)
+
+## Current Limitations
+
+- E2A is required for real audiobook generation.
+- The UI and database packages are not implemented yet.
+- The `app/audio` package is reserved for future audio post-processing.
+- LLM providers require their own API keys or local runtime.
+- PDF chapter boundaries may be less reliable than EPUB chapter boundaries.
+- Final output naming and some progress details depend on the installed E2A version.
